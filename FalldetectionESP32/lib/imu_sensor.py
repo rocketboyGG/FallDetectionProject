@@ -2,6 +2,7 @@ from machine import I2C, Pin
 from mpu6050 import MPU6050
 from time import ticks_ms
 from math import sqrt
+from SignalLightTest import SignalLight
 
 class IMU:
     def __init__(self, i2c):
@@ -9,11 +10,14 @@ class IMU:
         self.lasttime = 0
         self.lasttimeFallCheck = 0
         self.sampleInterval = 200
-        self.fallThreshold = 10000
-        self.stillThreshold = 1000
+        self.fallThreshold = 8000
+        self.stillThreshold = 2000
         self.possibleFall = False
+        self.fall = False
         self.waitCount = 0
-        self.firstFallCheck = False
+        
+        self.sigLig = SignalLight(25)
+        self.sigLig2 = SignalLight(26)
         
         imu_data = self.imu.get_values()
         self.prev_g_x = imu_data.get("acceleration x") / 9.8
@@ -27,11 +31,13 @@ class IMU:
             print("IMU FAILED!!!!!!!!!!!!")
             return {}
     
-    def calculateSpike(self):
-        
+    def calculateSpike(self): 
         if (ticks_ms() - self.lasttime >= self.sampleInterval):
             self.lasttime = ticks_ms()
             imu_data = self.getIMUData()
+            
+            self.sigLig.light(self.possibleFall)
+            self.sigLig2.light(self.fall)
             
             g_x = imu_data.get("acceleration x") / 9.8
             g_y = imu_data.get("acceleration y") / 9.8
@@ -46,22 +52,23 @@ class IMU:
             self.prev_g_z = g_z
             
             magnitude = sqrt(jerk_x * jerk_x + jerk_y * jerk_y + jerk_z * jerk_z)
+            
             print(magnitude)
             if (not self.possibleFall):
                 if (magnitude > self.fallThreshold):
-                    print("POSSIBLE FALL DETECTED")
                     self.possibleFall = True
-                    self.firstFallCheck = True
                     self.lasttimeFallCheck = ticks_ms()
             else:
                 if (ticks_ms() - self.lasttimeFallCheck > 1000):
                     if (magnitude > self.stillThreshold):
                         self.possibleFall = False
+                        self.fall = False
                         self.waitCount = 0
                     else:
                         print("adding to waitcount", self.waitCount)
                         self.waitCount += 1
                         if self.waitCount >= 10:
+                            self.fall = True
                             print("!!!!!FALL DETECTED!!!!!")
                 
 
