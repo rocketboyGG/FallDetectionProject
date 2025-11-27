@@ -7,15 +7,16 @@ class SignalLight:
         self.led_start = True
         self.lastime = 0
     
-    def light(self, possibleFall):
-        if possibleFall:   
+    def light(self, enabled):
+        if enabled:
             if self.led_start:
                 self.led.value(1)
                 self.led_start = False
                 self.lastime = ticks_ms()
-        if ticks_ms() - self.lastime > 1000:
+        if self.led.value() == 1:
+            if ticks_ms() - self.lastime > 1000:
                 self.led.value(0)
                 self.led_start = True
-    
+
         
 

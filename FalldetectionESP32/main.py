@@ -1,18 +1,30 @@
 from machine import I2C, Pin
 from lib.imu_sensor import IMU
 from lib.battery_status import BatteryStatus
+from lib.lmt87 import LMT87
+from lib.button import Button
+from SignalLightTest import SignalLight
 from time import sleep
 
-i2c = I2C(scl=Pin(22), sda=Pin(21))
-imu_sensor = IMU(i2c)
-
+imu_sensor = IMU()
+lmt = LMT87(33)
+but = Button()
+fallLight = SignalLight(25)
+possibleLight = SignalLight(26)
+buttonLight = SignalLight(32)
 battery_status = BatteryStatus()
 
 while True:
-    #imu_sensor.calculateSpike()
-    #print(battery_status.getPercentage_batt())
+    status = imu_sensor.calculateSpike()
+    button_status = but.manuelActivationCheck()
     
-    print(imu_sensor.imu.get_values().get("temperature celsius"))
-    sleep(0.5)
+    possibleLight.light(status[0])
+    fallLight.light(status[1])
+    buttonLight.light(button_status)
+    
+    #print(battery_status.getPercentage_batt())   
+    #print("IMU temp ", imu_sensor.imu.get_values().get("temperature celsius"))
+    #print("LMT87 temp ", lmt.get_temperature())
+    #sleep(1)
     
 
