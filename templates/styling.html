@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>{% block title %}{% endblock %}</title>
+</head>
+
+
+<style>
+.center-body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.center {
+    margin: auto;
+    width: 33%;
+    padding: 10px;
+    text-align: center;
+    
+}
+
+.button {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #b2d2f4;
+    color: black;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.logout {
+    text-align: end;
+}
+
+.list {
+    width: 1200px;
+    margin: 0 auto;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    background-color: #f9f9f9;
+}
+
+.list-header {
+    display: flex;
+    font-weight: bold;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #ccc;
+}
+
+.list-row {
+    display: flex;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    align-items: center;
+}
+
+.list-row > div,
+.list-header > div {
+    flex: 1;
+}
+
+.status-circle {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+}
+
+.status-good {
+    background-color: green;
+}
+
+.status-uhh {
+    background-color: orange;
+}
+
+.status-bad {
+    background-color: red;
+}
+
+</style>
+
+<body class="{% block body_class %}{% endblock %}">
+    {% block content %}
+    {% endblock %}
+</body>
+
+
+
+
+</html>
