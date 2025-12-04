@@ -1,5 +1,38 @@
 from flask import Flask, render_template, redirect, url_for, request
 from flask_login import LoginManager, login_user, login_required, current_user, logout_user, UserMixin
+import paho.mqtt.client as mqtt
+import psycopg2
+
+conn = psycopg2.connect(
+    host="localhost",
+    database="falldetectDatabase",
+    user="postgres",
+    password="123qwe"
+)
+cursor = conn.cursor()
+
+def on_message(client, userdata, msg):
+    cursor = userdata["cursor"]
+    conn = userdata["conn"]
+    topic = msg.topic
+    payload = msg.payload.decode()
+    cursor.execute(
+        "INSERT INTO sensor_data (topic, payload) VALUES (%s, %s)",
+        (topic, payload)
+    )
+    conn.commit()
+
+def mqtt_runner(db_cursor, db_conn):
+    client = mqtt.Client()
+    client.on_message() = on_message
+    client.connect("192.168.68.64")
+    client.user_data_set({"cursor": db_cursor, "conn": db_conn})
+    client.subscribe("fallband/battery")
+    client.subscribe("fallband/pulse")
+    client.subscribe("fallband/temp")
+    client.subscribe("fallband/fall")
+    client.loop_start()
+mqtt_runner(cursor, conn)
 
 app = Flask(__name__)
 app.secret_key = "secret" #Skal ændres senere, just for developent/debugging

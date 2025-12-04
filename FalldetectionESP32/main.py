@@ -40,23 +40,29 @@ mqtt_lasttime2 = time()
 
 while True:
     status = imu_sensor.calculateSpike()
-    if status[1] == True:
-        client.publish(b"esp32/fall", "FALL")
     button_status = but.manuelActivationCheck()
+    if status[1] or button_status:
+        client.publish(b"fallband/fall", "FALL")
 
-    
     possibleLight.light(status[0])
     fallLight.light(status[1])
     buttonLight.light(button_status)
 
     if time() - mqtt_lasttime2 >= 10:
-        client.publish(b"esp32/temperature", str(lmt.get_temperature()))
+        client.publish(b"fallband/temp", str(lmt.get_temperature()))
         mqtt_lasttime2 = time()
     
     if time() - mqtt_lasttime1 >= 60:
         client.publish(b"esp32/battery", str(battery_status.getPercentage_batt()))
         mqtt_lasttime1 = time()
     
+    """
+    if time() - mqtt_lasttime3 >= 10:
+        client.publish(b"fallband/temp", str(lmt.get_temperature()))
+        mqtt_lasttime3 = time()
+    """
+    
+
     #print(battery_status.getPercentage_batt())   
     #print("IMU temp ", imu_sensor.imu.get_values().get("temperature celsius"))
     #print("LMT87 temp ", lmt.get_temperature())
