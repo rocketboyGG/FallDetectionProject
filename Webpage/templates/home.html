@@ -1,0 +1,38 @@
+{% extends "styling.html" %}
+{% block title %}
+Home
+{% endblock %}
+{% block content %}
+<div class="logout">
+    <a class="button" href="/logout" role="button">Log ud</a>
+    </div>
+<h2 class="center">Person Liste</h2>
+
+<div class="list">
+    
+    <div class="list-header">
+        <div>Navn</div>
+        <div>Temp</div>
+        <div>Puls</div>
+        <div>Status</div>
+    </div>
+
+    {% for i in temp_list %}
+    <div class="list-row">
+        <div>{{ i.navn }}</div>
+        <div>{{ i.t }}</div>
+        <div>{{ i.p }}</div>
+        <div>
+            <span class="status-circle
+                {% if i.status == 'Good' %}status-good
+                {% elif i.status == 'uhh' %}status-uhh
+                {% elif i.status == 'Bad' %}status-bad
+                {% endif %}">
+            </span>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+
+{% endblock %}

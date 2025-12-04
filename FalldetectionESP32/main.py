@@ -6,7 +6,7 @@ from lib.battery_status import BatteryStatus
 from lib.lmt87 import LMT87
 from lib.button import Button
 from SignalLightTest import SignalLight
-from time import sleep
+from time import sleep, time
 
 imu_sensor = IMU()
 lmt = LMT87(33)
@@ -35,6 +35,9 @@ client = MQTTClient(client_id, mqtt_server)
 client.connect()
 print("Connected to MQTT broker")
 
+mqtt_lasttime1 = time()
+mqtt_lasttime2 = time()
+
 while True:
     status = imu_sensor.calculateSpike()
     if status[1] == True:
@@ -45,10 +48,19 @@ while True:
     possibleLight.light(status[0])
     fallLight.light(status[1])
     buttonLight.light(button_status)
+
+    if time() - mqtt_lasttime2 >= 10:
+        client.publish(b"esp32/temperature", str(lmt.get_temperature()))
+        mqtt_lasttime2 = time()
+    
+    if time() - mqtt_lasttime1 >= 60:
+        client.publish(b"esp32/battery", str(battery_status.getPercentage_batt()))
+        mqtt_lasttime1 = time()
     
     #print(battery_status.getPercentage_batt())   
     #print("IMU temp ", imu_sensor.imu.get_values().get("temperature celsius"))
     #print("LMT87 temp ", lmt.get_temperature())
-    #sleep(1)
+    sleep(0.1)
     
+
 
