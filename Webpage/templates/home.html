@@ -11,28 +11,64 @@ Home
 <div class="list">
     
     <div class="list-header">
-        <div>Navn</div>
-        <div>Temp</div>
-        <div>Puls</div>
-        <div>Status</div>
+        <div>Name</div>
+        <div>Battery</div>
+        <div>Pulse</div>
+        <div>Fall status</div>
+        <div>Last fall</div>
     </div>
 
-    {% for i in temp_list %}
     <div class="list-row">
-        <div>{{ i.navn }}</div>
-        <div>{{ i.t }}</div>
-        <div>{{ i.p }}</div>
-        <div>
-            <span class="status-circle
-                {% if i.status == 'Good' %}status-good
-                {% elif i.status == 'uhh' %}status-uhh
-                {% elif i.status == 'Bad' %}status-bad
-                {% endif %}">
-            </span>
-        </div>
+        <div> Test </div>
+        <div id="field_battery"> 0 </div>
+        <div id="field_pulse"> 0 </div>
+        <div id="field_fall"> - </div>
+        <div id="field_last_registered"> - </div>
     </div>
-    {% endfor %}
 </div>
+
+<script>
+    let lastFallTime = null;   
+    const FALL_DISPLAY_MS = 10000;
+    async function fetchData() {
+        const response = await fetch('/data');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+
+        const pulseDiv = document.getElementById("field_pulse");
+        pulseDiv.textContent = data[0]
+
+        const batteryDiv = document.getElementById("field_battery");
+        batteryDiv.textContent = data[1]
+
+        console.log(data[2])
+        // If server reports a fall
+        if (data[2] !== "no") {
+            lastFallTime = Date.now();
+            const fallDiv = document.getElementById("field_fall");
+            fallDiv.textContent = "FALL at " + data[2];
+        }
+
+        // If we have a stored fall but time has expired → clear it
+        else if (lastFallTime !== null) {
+            const elapsed = Date.now() - lastFallTime;
+
+            if (elapsed > FALL_DISPLAY_MS) {
+                const fallDiv = document.getElementById("field_fall");
+                const last_registeredDiv = document.getElementById("field_last_registered");
+                last_registeredDiv.textContent = fallDiv.textContent;
+                fallDiv.textContent = "-";
+                lastFallTime = null;
+            }
+        }
+
+    }
+    fetchData();
+    setInterval(fetchData, 2000);
+
+</script>
 
 
 {% endblock %}
