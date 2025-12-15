@@ -18,7 +18,6 @@ class ADC_substitute():
         self.__adc.atten(ADC.ATTN_11DB)
         self.__adc.width(ADC.WIDTH_12BIT) 
         
-        
     def read_adc(self):
         adc_val = 0
         for i in range(256):

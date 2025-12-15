@@ -2,11 +2,9 @@ from adc_sub import ADC_substitute
 from time import sleep
 
 class BatteryStatus:
-    def __init__(self):
-        pin_U = 36
+    def __init__(self, pin_num):
         self.lin = self.getSlope(1698, 2440, 3.0, 4.2)
-        self.adcsub = ADC_substitute(pin_U)
-
+        self.adcsub = ADC_substitute(pin_num)
 
     def getSlope(self, x1, x2, y1, y2):
         a = (y2 - y1) / (x2 - x1)
@@ -27,7 +25,6 @@ class BatteryStatus:
     
     def getPercentage_batt(self):
         adc = self.adcsub.read_adc()
+        print("adc", adc)
         bat_v = self.batt_voltage(adc)
         return self.batt_percentage(bat_v)
-    
-

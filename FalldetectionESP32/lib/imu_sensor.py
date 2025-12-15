@@ -1,28 +1,29 @@
 from machine import I2C, Pin
-from mpu6050 import MPU6050
+from imu import MPU6050
 from time import ticks_ms
 from math import sqrt
-from SignalLightTest import SignalLight
 
 class IMU:
     def __init__(self, i2c):
         self.imu = MPU6050(i2c)
+        
         self.lasttime = 0
         self.lasttimeFallCheck = 0
-        self.sampleInterval = 200
-        self.fallThreshold = 8000
-        self.stillThreshold = 2000
+        
+        self.sampleInterval = 20
+        self.fallThreshold_accel = 150
+        self.fallThreshold_gyro = 15000
+        
+        self.stillThreshold_accel = 10
+        self.stillThreshold_gyro = 500
+        
+        self.waittime_after_fall = 1000
         self.possibleFall = False
         self.fall = False
         self.waitCount = 0
-        
-        self.sigLig = SignalLight(25)
-        self.sigLig2 = SignalLight(26)
-        
-        imu_data = self.imu.get_values()
-        self.prev_g_x = imu_data.get("acceleration x") / 9.8
-        self.prev_g_y = imu_data.get("acceleration y") / 9.8
-        self.prev_g_z = imu_data.get("acceleration z") / 9.8
+
+        self.prev_accel = self.imu.accel.xyz
+        self.prev_gyro = self.imu.gyro.xyz
         
     def getIMUData(self):
         try:
@@ -31,46 +32,47 @@ class IMU:
             print("IMU FAILED!!!!!!!!!!!!")
             return {}
     
+    def printIMUdata(self):
+        print(self.imu.accel.xyz)
+    
     def calculateSpike(self): 
+        self.fall = False
         if (ticks_ms() - self.lasttime >= self.sampleInterval):
-            self.lasttime = ticks_ms()
-            imu_data = self.getIMUData()
+            jerk_x = (self.imu.accel.x - self.prev_accel[0]) / (self.sampleInterval / 1000)
+            jerk_y = (self.imu.accel.y - self.prev_accel[1]) / (self.sampleInterval / 1000)
+            jerk_z = (self.imu.accel.z - self.prev_accel[2]) / (self.sampleInterval / 1000)
             
-            self.sigLig.light(self.possibleFall)
-            self.sigLig2.light(self.fall)
+            jerk_gyro_x = (self.imu.gyro.x - self.prev_gyro[0]) / (self.sampleInterval / 1000)
+            jerk_gyro_y = (self.imu.gyro.y - self.prev_gyro[1]) / (self.sampleInterval / 1000)
+            jerk_gyro_z = (self.imu.gyro.z - self.prev_gyro[2]) / (self.sampleInterval / 1000)
             
-            g_x = imu_data.get("acceleration x") / 9.8
-            g_y = imu_data.get("acceleration y") / 9.8
-            g_z = imu_data.get("acceleration z") / 9.8
+            self.prev_accel = self.imu.accel.xyz
+            self.prev_gyro = self.imu.gyro.xyz
             
-            jerk_x = (g_x - self.prev_g_x) / (self.sampleInterval / 1000)
-            jerk_y = (g_y - self.prev_g_y) / (self.sampleInterval / 1000)
-            jerk_z = (g_z - self.prev_g_z) / (self.sampleInterval / 1000)
+            magnitude_accel = sqrt(jerk_x**2 + jerk_y**2 + jerk_z**2)
+            magnitude_gyro = sqrt(jerk_gyro_x**2 + jerk_gyro_y**2 + jerk_gyro_z**2)
             
-            self.prev_g_x = g_x
-            self.prev_g_y = g_y
-            self.prev_g_z = g_z
-            
-            magnitude = sqrt(jerk_x * jerk_x + jerk_y * jerk_y + jerk_z * jerk_z)
-            
-            print(magnitude)
+            #print(magnitude_accel, magnitude_gyro)
             if (not self.possibleFall):
-                if (magnitude > self.fallThreshold):
+                if (magnitude_accel > self.fallThreshold_accel or magnitude_gyro > self.fallThreshold_gyro):
                     self.possibleFall = True
                     self.lasttimeFallCheck = ticks_ms()
             else:
-                if (ticks_ms() - self.lasttimeFallCheck > 1000):
-                    if (magnitude > self.stillThreshold):
+                if (ticks_ms() - self.lasttimeFallCheck > self.waittime_after_fall):
+                    if (magnitude_accel > self.stillThreshold_accel and magnitude_gyro > self.stillThreshold_gyro):
                         self.possibleFall = False
-                        self.fall = False
                         self.waitCount = 0
                     else:
-                        print("adding to waitcount", self.waitCount)
+                        #print("adding to waitcount", self.waitCount)
                         self.waitCount += 1
-                        if self.waitCount >= 10:
+                        if self.waitCount >= 250:
                             self.fall = True
+                            self.possibleFall = False
+                            self.waitCount = 0
                             print("!!!!!FALL DETECTED!!!!!")
-                
+            
+            self.lasttime = ticks_ms()
+        return (self.possibleFall, self.fall)
 
     def printIMUData(self):
         imu_data = self.getIMUData()

@@ -13,8 +13,8 @@ class SignalLight:
                 self.led.value(1)
                 self.led_start = False
                 self.lastime = ticks_ms()
-        if self.led.value() == 1:
-            if ticks_ms() - self.lastime > 1000:
+        if not self.led_start:
+            if ticks_ms() - self.lastime >= 1000:
                 self.led.value(0)
                 self.led_start = True
 

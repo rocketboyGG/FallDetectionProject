@@ -1,39 +1,20 @@
-import network
-from umqtt.simple import MQTTClient
 from machine import I2C, Pin
 from lib.imu_sensor import IMU
 from lib.battery_status import BatteryStatus
-from lib.lmt87 import LMT87
 from lib.button import Button
 from SignalLightTest import SignalLight
+from lib.mqtt import MQTT
 from time import sleep, time
 
-imu_sensor = IMU()
-lmt = LMT87(33)
-but = Button()
-fallLight = SignalLight(25)
-possibleLight = SignalLight(26)
+i2c = I2C(scl=Pin(22), sda=Pin(21))
+heart_rate_sensor = HeartRateSensor(i2c)
+imu_sensor = IMU(i2c)
+but = Button(35) 
+fallLight = SignalLight(25) # Change pin to 18
+possibleLight = SignalLight(12) # Change pin to 19
 buttonLight = SignalLight(32)
-battery_status = BatteryStatus()
-
-# Tilslut Wi-Fi
-ssid = "The Beast"
-password = "w2u8kdze"
-wifi = network.WLAN(network.STA_IF)
-wifi.active(True)
-wifi.connect(ssid, password)
-while not wifi.isconnected():
-    time.sleep(0.5)
-print("Connected to Wi-Fi")
-
-# MQTT broker info
-mqtt_server = "10.19.144.9"
-client_id = "esp32_client"
-
-# Connect til MQTT broker
-client = MQTTClient(client_id, mqtt_server)
-client.connect()
-print("Connected to MQTT broker")
+battery_status = BatteryStatus(13) # Change pin 34 eller 36(VP) 39(VN)
+mqtt = MQTT()
 
 mqtt_lasttime1 = time()
 mqtt_lasttime2 = time()
@@ -41,32 +22,25 @@ mqtt_lasttime2 = time()
 while True:
     status = imu_sensor.calculateSpike()
     button_status = but.manuelActivationCheck()
+
     if status[1] or button_status:
-        client.publish(b"fallband/fall", "FALL")
+        mqtt.client.publish(b"fallband/fall", "FALL")
 
     possibleLight.light(status[0])
     fallLight.light(status[1])
     buttonLight.light(button_status)
 
-    if time() - mqtt_lasttime2 >= 10:
-        client.publish(b"fallband/temp", str(lmt.get_temperature()))
-        mqtt_lasttime2 = time()
-    
-    if time() - mqtt_lasttime1 >= 60:
-        client.publish(b"esp32/battery", str(battery_status.getPercentage_batt()))
+    if time() - mqtt_lasttime1 >= 10:
+        print(heart_rate_sensor.current_heart_rate)  
+        mqtt.client.publish(b"fallband/pulse", str(heart_rate_sensor.current_heart_rate))
         mqtt_lasttime1 = time()
     
-    """
-    if time() - mqtt_lasttime3 >= 10:
-        client.publish(b"fallband/temp", str(lmt.get_temperature()))
-        mqtt_lasttime3 = time()
-    """
-    
+    if time() - mqtt_lasttime2 >= 6:
+        bat = battery_status.getPercentage_batt()
+        print(bat)
+        mqtt.client.publish(b"fallband/battery", str(bat))
+        mqtt_lasttime2 = time() 
 
-    #print(battery_status.getPercentage_batt())   
-    #print("IMU temp ", imu_sensor.imu.get_values().get("temperature celsius"))
-    #print("LMT87 temp ", lmt.get_temperature())
-    sleep(0.1)
     
 
 
