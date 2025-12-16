@@ -42,5 +42,3 @@ while True:
         print("Publish battery status:", bat)
         mqtt.client.publish(b"fallband/battery", str(bat))
         mqtt_lasttime2 = time() 
-
-    

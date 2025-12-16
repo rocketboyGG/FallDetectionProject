@@ -1,4 +1,3 @@
-
 from max30102 import MAX30102, MAX30105_PULSE_AMP_MEDIUM
 from time import ticks_ms, ticks_diff
 
@@ -151,8 +150,8 @@ class HeartRateSensor:
                     print("Not enough data to calculate heart rate")
                 # Reset the reference time
                 self.ref_time = ticks_ms()       
-        except:
-            print("Error")
+        except Exception as e:
+            print(f"Pulse sensor error: {e}")
             
             
 

@@ -6,6 +6,7 @@ class BatteryStatus:
         self.lin = self.getSlope(1698, 2440, 3.0, 4.2)
         self.adcsub = ADC_substitute(pin_num)
 
+
     def getSlope(self, x1, x2, y1, y2):
         a = (y2 - y1) / (x2 - x1)
         b = y1 - a * x1
@@ -25,6 +26,7 @@ class BatteryStatus:
     
     def getPercentage_batt(self):
         adc = self.adcsub.read_adc()
-        print("adc", adc)
         bat_v = self.batt_voltage(adc)
         return self.batt_percentage(bat_v)
+ 
+
