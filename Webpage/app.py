@@ -1,84 +1,41 @@
 from flask import Flask, render_template, redirect, url_for, request, jsonify
 from flask_login import LoginManager, login_user, login_required, current_user, logout_user, UserMixin
-import paho.mqtt.client as mqtt
-import psycopg2
+from lib.mqtt import MQTT
+from lib.database import Database
 import json
+import atexit
+import sys
+import nmap
 
-conn = psycopg2.connect(
-    host="localhost",
-    database="falldetectDatabase",
-    user="postgres",
-    password="GGcakerocket87GG"
-)
-cursor = conn.cursor()
+db = Database()
+mqtt = MQTT(db.cursor, db.conn)
 
-def create_test_database(cursor, conn):
-    sql = """ 
-        CREATE TABLE sensor_data (
-            id SERIAL PRIMARY KEY,
-            topic TEXT NOT NULL,
-            payload TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT NOW()
-        );
-        """
-    cursor.execute(sql)
-    conn.commit()
+atexit.register(mqtt.cleanup_mqtt)
 
-def create_test_data(cursor, conn):
-    cursor.execute(
-        "INSERT INTO sensor_data (topic, payload) VALUES (%s, %s)",
-        ("fallband/fall", "FALL")
-    )
-    cursor.execute(
-        "INSERT INTO sensor_data (topic, payload) VALUES (%s, %s)",
-        ("fallband/pulse", "23")
-    )
-    cursor.execute(
-        "INSERT INTO sensor_data (topic, payload) VALUES (%s, %s)",
-        ("fallband/battery", "46")
-    )
-    conn.commit()
+def scan_network_for_hosts(network_range):
+    print(f"[*] Starting Nmap host discovery scan on {network_range}...")
 
-create_test_data(cursor, conn)
+    # Initialize the Nmap PortScanner object
+    nm = nmap.PortScanner()
 
-def print_table(cursor, conn):
-    sql1 = """
-        SELECT payload
-        FROM sensor_data
-        WHERE topic = 'fallband/pulse'
-        ORDER BY created_at DESC
-        LIMIT 1;
-    """
-    cursor.execute(sql1)
-    pulse_data = cursor.fetchone()
-    print(pulse_data)
+    # Run the scan with the -sn argument (ping sweep/host discovery)
+    # The result is stored internally in the nm object
+    nm.scan(hosts=network_range, arguments='-sn')
 
-print_table(cursor, conn)
+    active_hosts = []
+    # Iterate over all hosts that Nmap scanned
+    for host in nm.all_hosts():
+        # Check if the host's status is 'up'
+        if nm[host]['status']['state'] == 'up':
+            active_hosts.append(host)
+            # Optional: Get hostname if available
+            # try:
+            #     hostname = nm[host].hostname()
+            #     print(f"Host: {host} ({hostname}) is UP")
+            # except:
+            #     print(f"Host: {host} is UP (Hostname not found)")
 
-
-def on_message(client, userdata, msg):
-    cursor = userdata["cursor"]
-    conn = userdata["conn"]
-    topic = msg.topic
-    payload = msg.payload.decode()
-    if "fallband/fall" in topic:
-        client.publish(b"fallband/vibrator", "FALL")
-    cursor.execute(
-        "INSERT INTO sensor_data (topic, payload) VALUES (%s, %s)",
-        (topic, payload)
-    )
-    conn.commit()
-
-def mqtt_runner(db_cursor, db_conn):
-    client = mqtt.Client()
-    client.on_message = on_message
-    client.connect("192.168.68.64")
-    client.user_data_set({"cursor": db_cursor, "conn": db_conn})
-    client.subscribe("fallband/battery")
-    client.subscribe("fallband/pulse")
-    client.subscribe("fallband/fall")
-    client.loop_start()
-#mqtt_runner(cursor, conn)
+    return active_hosts
 
 app = Flask(__name__)
 app.secret_key = "secret" #Skal ændres senere, just for developent/debugging
@@ -87,68 +44,32 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
-last_fall = None
-
 class User(UserMixin):
     def __init__(self, id):
         self.id = id
 
-TEMP_USERNAME = "123"
-TEMP_PASSWORD = "123"
+TEMP_USERNAME = "admin"
+TEMP_PASSWORD = "1234"
 
 @login_manager.user_loader
 def load_user(user_id):
     return User(user_id)
-
-def fetch_data_from_db():
-    sql1 = """
-        SELECT payload
-        FROM sensor_data
-        WHERE topic = 'fallband/pulse'
-        ORDER BY created_at DESC
-        LIMIT 1;
-    """
-    cursor.execute(sql1)
-    pulse_data = cursor.fetchone()
-
-    sql2 = """
-        SELECT payload
-        FROM sensor_data
-        WHERE topic = 'fallband/battery'
-        ORDER BY created_at DESC
-        LIMIT 1;
-    """
-    cursor.execute(sql2)
-    battery_data = cursor.fetchone()
-
-    global last_fall
-    sql3 = """
-        SELECT created_at
-        FROM sensor_data
-        WHERE topic = 'fallband/fall'
-        ORDER BY created_at DESC
-        LIMIT 1;
-    """
-    cursor.execute(sql3)
-    fall_registered = cursor.fetchone()
-
-    if fall_registered != last_fall:
-        print("!!!!!FALLLLLLL!!!!!!!")
-        last_fall = fall_registered
-        return (pulse_data[0], battery_data[0], fall_registered[0])
-
-    return (pulse_data[0], battery_data[0], "no")
-
 
 @app.route("/home")
 @login_required
 def home():
     return render_template("home.html")
 
+@app.route("/hosts")
+@login_required
+def hosts():
+    live_hosts_list = scan_network_for_hosts("192.168.1.0/24")
+    return render_template("hosts.html", hosts_list=live_hosts_list)
+
 @app.route('/data')
 def api_data():
     """API endpoint to return the visualization data as JSON (for JS updates)."""
-    data = fetch_data_from_db()
+    data = db.fetch_data_from_db()
     print(data)
     return jsonify(data)
 
@@ -174,4 +95,4 @@ def logout():
     return redirect(url_for("login"))
 
 if __name__ == ('__main__'):
-    app.run(host="0.0.0.0", debug=True)
+    app.run(host="0.0.0.0", debug=TrueActivate)
