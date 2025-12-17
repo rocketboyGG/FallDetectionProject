@@ -1,11 +1,12 @@
 import network, ubinascii
 from umqtt.simple import MQTTClient
 from time import sleep
+import lib.secrets
 
 class MQTT:
     def __init__(self):
-        ssid = "The Beast"
-        password = "w2u8kdze"
+        ssid = lib.secrets.wifi_ssid
+        password = lib.secrets.wifi_password
         self.wifi = network.WLAN(network.STA_IF)
         self.wifi.active(True)
         self.wifi.connect(ssid, password)
@@ -14,7 +15,7 @@ class MQTT:
         print("Connected to Wi-Fi")
 
         # MQTT broker info
-        mqtt_server = "10.19.144.9"
+        mqtt_server = lib.secrets.mqtt_server_ip
         client_id = self.get_unique_id()
 
         # Connect til MQTT broker
@@ -28,3 +29,4 @@ class MQTT:
         mac = ubinascii.hexlify(wlan.config('mac'), ':').decode()
         # Use the MAC address to create a unique Client ID
         return b'esp32_' + ubinascii.hexlify(wlan.config('mac'))
+

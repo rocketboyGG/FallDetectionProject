@@ -3,8 +3,8 @@ from lib.battery_status import BatteryStatus
 from lib.mqtt import MQTT
 from time import sleep, time
 
-motor = Pin(23, Pin.OUT)
-battery = BatteryStatus(35)
+motor = Pin(13, Pin.OUT)
+battery = BatteryStatus(34)
 mqtt = MQTT()
 
 def on_message(topic, msg):
@@ -23,10 +23,9 @@ last_batt_send = time()
 while True:
     mqtt.client.check_msg()
     now = time()
-    if now - last_batt_send >= 60:
+    if now - last_batt_send >= 3:
         batt = battery.getPercentage_batt()
-        #print("Sending battery:", batt)
+        print("Sending battery:", batt)
         mqtt.client.publish(b"vibration/battery", str(batt))
         last_batt_send = now
     sleep(1)
-
